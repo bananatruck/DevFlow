@@ -1,0 +1,28 @@
+# Core
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+
+# Orchestration (pick one; LangGraph preferred)
+langgraph
+
+# DB
+sqlmodel
+psycopg[binary]
+pgvector
+
+# Queue
+redis
+
+# CLI
+typer
+rich
+
+# Testing
+pytest
+pytest-asyncio
+
+# Utils
+httpx
+python-dotenv

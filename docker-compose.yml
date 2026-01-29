@@ -1,0 +1,38 @@
+services:
+  api:
+    build: .
+    container_name: devflow_api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:17
+    container_name: devflow_postgres
+    environment:
+      POSTGRES_USER: devflow
+      POSTGRES_PASSWORD: devflow
+      POSTGRES_DB: devflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - devflow_pgdata:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: devflow_redis
+    ports:
+      - "6379:6379"
+
+  # Optional: sandbox runner service (future)
+  # sandbox:
+  #   build: ./sandbox
+  #   container_name: devflow_sandbox
+  #   ...
+
+volumes:
+  devflow_pgdata:
