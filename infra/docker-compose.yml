@@ -1,0 +1,107 @@
+# DevFlow Docker Compose
+# Run with: docker compose -f infra/docker-compose.yml up -d
+
+services:
+  # FastAPI Backend
+  api:
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+    container_name: devflow_api
+    env_file:
+      - ../.env
+    environment:
+      - DATABASE_URL=postgresql+psycopg://devflow:devflow@postgres:5432/devflow
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      # Mount for local repository access
+      - ${HOME}:/host_home:ro
+    networks:
+      - devflow-net
+    restart: unless-stopped
+
+  # Next.js Frontend
+  web:
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+    container_name: devflow_web
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - devflow-net
+    restart: unless-stopped
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:17
+    container_name: devflow_postgres
+    environment:
+      POSTGRES_USER: devflow
+      POSTGRES_PASSWORD: devflow
+      POSTGRES_DB: devflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - devflow_pgdata:/var/lib/postgresql/data
+    networks:
+      - devflow-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U devflow -d devflow" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Redis Queue
+  redis:
+    image: redis:7-alpine
+    container_name: devflow_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - devflow_redis:/data
+    networks:
+      - devflow-net
+    restart: unless-stopped
+  # Sandbox Runner (for isolated command execution)
+  # sandbox:
+  #   build:
+  #     context: ..
+  #     dockerfile: infra/docker/sandbox.Dockerfile
+  #   container_name: devflow_sandbox
+  #   security_opt:
+  #     - no-new-privileges:true
+  #   cap_drop:
+  #     - ALL
+  #   read_only: true
+  #   networks:
+  #     - devflow-sandbox
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         cpus: '1'
+  #         memory: 512M
+
+volumes:
+  devflow_pgdata:
+  devflow_redis:
+
+
+networks:
+  devflow-net:
+    driver: bridge
+  # devflow-sandbox:
+  #   driver: bridge
+  #   internal: true
